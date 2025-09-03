@@ -1,6 +1,7 @@
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-#[derive(Eq)]
+#[derive(Eq, Serialize, Deserialize)]
 pub struct Account {
     pub id: Uuid,
     pub name: String,
