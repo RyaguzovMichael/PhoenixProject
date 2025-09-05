@@ -5,12 +5,12 @@ use uuid::Uuid;
 pub struct Account {
     pub id: Uuid,
     pub name: String,
-    pub description: String,
+    pub description: Option<String>,
     pub currency: String,
 }
 
 impl Account {
-    pub fn new(name: String, description: String, currency: String) -> Self {
+    pub fn new(name: String, description: Option<String>, currency: String) -> Self {
         Self {
             id: Uuid::new_v4(),
             name,

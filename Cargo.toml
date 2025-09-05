@@ -1,7 +1,7 @@
 [workspace]
 members = [
-    "fp-core",
-    "fp-db",
-    "fp-common" 
+    "fpcore",
+    "fpdb",
+    "fpcommon" 
 ]
 resolver = "2"
