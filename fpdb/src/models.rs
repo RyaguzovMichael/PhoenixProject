@@ -3,6 +3,7 @@ use chrono::{DateTime, Utc};
 use fpcommon::{
     account::Account, category::Category, currency::CurrencyRate, transaction::Transaction,
 };
+use serde::{Deserialize, Serialize};
 use std::str::FromStr;
 use uuid::Uuid;
 
@@ -10,7 +11,7 @@ trait DataBaseItem {
     fn get_id(&self) -> &str;
 }
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub(crate) struct AccountDb {
     pub primary_id: String,
     pub name: String,
@@ -18,7 +19,7 @@ pub(crate) struct AccountDb {
     pub currency: String,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub(crate) struct TransactionDb {
     pub primary_id: String,
     pub amount: i64,
@@ -29,7 +30,7 @@ pub(crate) struct TransactionDb {
     pub date: DateTime<Utc>,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Serialize, Deserialize)]
 pub(crate) struct CategoryDb {
     pub primary_id: String,
     pub name: String,

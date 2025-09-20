@@ -1,4 +1,4 @@
-pub(crate) const db_scema: &str = r#"
+pub(crate) const DB_SCEMA: &str = r#"
 CREATE TABLE IF NOT EXISTS accounts (
     primary_id  TEXT PRIMARY KEY NOT NULL,
     name        TEXT NOT NULL UNIQUE,
@@ -26,3 +26,9 @@ CREATE TABLE IF NOT EXISTS transactions (
     FOREIGN KEY (to_id) REFERENCES accounts (primary_id)
 );
 "#;
+
+pub(crate) const ACCOUNT_SET: &str =
+    "INSERT INTO accounts (primary_id, name, description, currency) VALUES (?1, ?2, ?3, ?4)";
+
+pub(crate) const ACCOUNTS_GET: &str =
+    "SELECT primary_id, name, description, currency FROM accounts";
