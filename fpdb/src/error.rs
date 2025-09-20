@@ -1,7 +1,5 @@
 use std::convert::Infallible;
 
-use uuid;
-
 #[derive(Debug)]
 pub struct Error {
     pub message: String,
@@ -9,14 +7,6 @@ pub struct Error {
 
 impl From<Infallible> for Error {
     fn from(value: Infallible) -> Self {
-        Error {
-            message: value.to_string(),
-        }
-    }
-}
-
-impl From<uuid::Error> for Error {
-    fn from(value: uuid::Error) -> Self {
         Error {
             message: value.to_string(),
         }

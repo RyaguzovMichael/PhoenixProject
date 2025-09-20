@@ -3,212 +3,153 @@ use chrono::{DateTime, Utc};
 use fpcommon::{
     account::Account, category::Category, currency::CurrencyRate, transaction::Transaction,
 };
-use serde::{Deserialize, Serialize};
-use std::str::FromStr;
-use uuid::Uuid;
 
-trait DataBaseItem {
-    fn get_id(&self) -> &str;
-}
-
-#[derive(Clone, Serialize, Deserialize)]
-pub(crate) struct AccountDb {
-    pub primary_id: String,
-    pub name: String,
-    pub description: Option<String>,
-    pub currency: String,
-}
-
-#[derive(Clone, Serialize, Deserialize)]
 pub(crate) struct TransactionDb {
-    pub primary_id: String,
     pub amount: i64,
-    pub category_id: Option<String>,
+    pub category_name: Option<String>,
+    pub category_description: Option<String>,
     pub currency_rate: Option<f64>,
-    pub from_id: Option<String>,
-    pub to_id: Option<String>,
+    pub from_name: Option<String>,
+    pub from_description: Option<String>,
+    pub from_currency: Option<String>,
+    pub to_name: Option<String>,
+    pub to_description: Option<String>,
+    pub to_currency: Option<String>,
     pub date: DateTime<Utc>,
-}
-
-#[derive(Clone, Serialize, Deserialize)]
-pub(crate) struct CategoryDb {
-    pub primary_id: String,
-    pub name: String,
-    pub description: Option<String>,
-}
-
-impl DataBaseItem for AccountDb {
-    fn get_id(&self) -> &str {
-        &self.primary_id
-    }
-}
-
-impl DataBaseItem for CategoryDb {
-    fn get_id(&self) -> &str {
-        &self.primary_id
-    }
-}
-
-impl DataBaseItem for TransactionDb {
-    fn get_id(&self) -> &str {
-        &self.primary_id
-    }
-}
-
-impl From<Account> for AccountDb {
-    fn from(account: Account) -> Self {
-        AccountDb {
-            primary_id: account.id.to_string(),
-            name: account.name,
-            description: account.description,
-            currency: account.currency,
-        }
-    }
-}
-
-impl TryInto<Account> for AccountDb {
-    type Error = Error;
-
-    fn try_into(self) -> Result<Account, Error> {
-        let id: Uuid = Uuid::from_str(&self.primary_id)?;
-        Ok(Account {
-            id,
-            name: self.name,
-            description: self.description,
-            currency: self.currency,
-        })
-    }
 }
 
 impl From<Transaction> for TransactionDb {
     fn from(transaction: Transaction) -> Self {
         match transaction {
             Transaction::Income {
-                id,
                 amount,
                 to,
                 category,
                 date,
             } => TransactionDb {
-                primary_id: id.to_string(),
                 amount: amount,
-                category_id: Some(category.id.to_string()),
+                category_name: Some(category.name),
+                category_description: None,
                 currency_rate: None,
-                from_id: None,
-                to_id: Some(to.id.to_string()),
+                from_name: None,
+                from_description: None,
+                from_currency: None,
+                to_name: Some(to.name),
+                to_description: None,
+                to_currency: None,
                 date: date,
             },
             Transaction::Outcome {
-                id,
                 amount,
                 from,
                 category,
                 date,
             } => TransactionDb {
-                primary_id: id.to_string(),
                 amount: amount,
-                category_id: Some(category.id.to_string()),
+                category_name: Some(category.name),
+                category_description: None,
                 currency_rate: None,
-                from_id: Some(from.id.to_string()),
-                to_id: None,
+                from_name: Some(from.name),
+                from_description: None,
+                from_currency: None,
+                to_name: None,
+                to_description: None,
+                to_currency: None,
                 date: date,
             },
             Transaction::Transfer {
-                id,
                 amount,
                 currency_rate,
                 to,
                 from,
                 date,
             } => TransactionDb {
-                primary_id: id.to_string(),
                 amount: amount,
-                category_id: None,
+                category_name: None,
+                category_description: None,
                 currency_rate: match currency_rate {
                     CurrencyRate::Empty => None,
                     CurrencyRate::Rate(rate) => Some(rate),
                 },
-                from_id: Some(from.id.to_string()),
-                to_id: Some(to.id.to_string()),
+                from_name: Some(from.name),
+                from_description: None,
+                from_currency: None,
+                to_name: Some(to.name),
+                to_description: None,
+                to_currency: None,
                 date: date,
             },
         }
     }
 }
 
-impl TransactionDb {
-    pub(crate) fn to(
-        transaction: Self,
-        accounts: &[AccountDb],
-        categories: &[CategoryDb],
-    ) -> Result<Transaction, Error> {
-        if transaction.to_id.is_some() && transaction.from_id.is_some() {
+impl TryInto<Transaction> for TransactionDb {
+    type Error = Error;
+
+    fn try_into(self) -> Result<Transaction, Self::Error> {
+        if self.category_name.is_none() {
             return Ok(Transaction::Transfer {
-                id: Uuid::from_str(&transaction.primary_id)?,
-                amount: transaction.amount,
-                currency_rate: if let Some(rate) = transaction.currency_rate {
+                amount: self.amount,
+                currency_rate: if let Some(rate) = self.currency_rate {
                     CurrencyRate::Rate(rate)
                 } else {
                     CurrencyRate::Empty
                 },
-                to: get_item_by_id::<AccountDb, Account>(transaction.to_id, accounts)?,
-                from: get_item_by_id::<AccountDb, Account>(transaction.from_id, accounts)?,
-                date: transaction.date,
-            });
-        }
-        if transaction.from_id.is_some() {
-            return Ok(Transaction::Outcome {
-                id: Uuid::from_str(&transaction.primary_id)?,
-                amount: transaction.amount,
-                from: get_item_by_id::<AccountDb, Account>(transaction.from_id, accounts)?,
-                category: get_item_by_id::<CategoryDb, Category>(
-                    transaction.category_id,
-                    categories,
-                )?,
-                date: transaction.date,
-            });
-        }
-        return Ok(Transaction::Income {
-            id: Uuid::from_str(&transaction.primary_id)?,
-            amount: transaction.amount,
-            to: get_item_by_id::<AccountDb, Account>(transaction.to_id, accounts)?,
-            category: get_item_by_id::<CategoryDb, Category>(transaction.category_id, categories)?,
-            date: transaction.date,
-        });
+                from: if let (Some(name), Some(currency)) = (self.from_name, self.from_currency) {
+                    Account {
+                        name,
+                        description: self.from_description,
+                        currency,
+                    }
+                } else {
+                    return Err(Error::from("Error"));
+                },
+                to: if let (Some(name), Some(currency)) = (self.to_name, self.to_currency) {
+                    Account {
+                        name,
+                        description: self.to_description,
+                        currency,
+                    }
+                } else {
+                    return Err(Error::from("Error"));
+                },
 
-        fn get_item_by_id<I, T>(id: Option<String>, items: &[I]) -> Result<T, Error>
-        where
-            I: DataBaseItem + TryInto<T> + Clone,
-            Error: From<<I as TryInto<T>>::Error> + From<&'static str>,
+                date: self.date,
+            });
+        } else if let (Some(name), Some(currency), Some(category)) =
+            (self.to_name, self.to_currency, &self.category_name)
         {
-            let id = id.ok_or(Error::from("Id was not exist"))?;
-            let item = items
-                .iter()
-                .find(|&el| *el.get_id() == *id)
-                .ok_or(Error::from("Not found item by id"))?;
-            Ok((item.clone()).try_into()?)
+            return Ok(Transaction::Income {
+                amount: self.amount,
+                to: Account {
+                    name,
+                    description: self.to_description,
+                    currency,
+                },
+                category: Category {
+                    name: String::from(category),
+                    description: self.category_description,
+                },
+                date: self.date,
+            });
+        } else if let (Some(name), Some(currency), Some(category)) =
+            (self.from_name, self.from_currency, self.category_name)
+        {
+            return Ok(Transaction::Outcome {
+                amount: self.amount,
+                from: Account {
+                    name,
+                    description: self.from_description,
+                    currency,
+                },
+                category: Category {
+                    name: category,
+                    description: self.category_description,
+                },
+                date: self.date,
+            });
+        } else {
+            return Err(Error::from("Error"));
         }
-    }
-}
-
-impl From<Category> for CategoryDb {
-    fn from(category: Category) -> Self {
-        CategoryDb {
-            primary_id: category.id.to_string(),
-            name: category.name,
-            description: category.description,
-        }
-    }
-}
-
-impl TryInto<Category> for CategoryDb {
-    type Error = Error;
-
-    fn try_into(self) -> Result<Category, Self::Error> {
-        Ok(Category {
-            id: Uuid::from_str(&self.primary_id)?,
-            name: self.name,
-            description: self.description,
-        })
     }
 }
